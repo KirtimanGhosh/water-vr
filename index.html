@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b1a2a">
+<title>Water VR — phases of water</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#0b1a2a;color:#e8f1f8;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans Bengali','Noto Sans Devanagari','Noto Sans Oriya',sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+  canvas#c{display:block;position:fixed;inset:0;width:100%;height:100%}
+  .ui{position:fixed;z-index:5}
+  #top{top:env(safe-area-inset-top,0);left:0;right:0;display:flex;flex-wrap:wrap;gap:6px;padding:8px;pointer-events:none}
+  #top button{pointer-events:auto}
+  button,select{font:inherit;font-size:15px;min-height:44px;min-width:44px;padding:0 10px;border-radius:12px;border:1px solid #ffffff33;background:#10263bcc;color:#e8f1f8}
+  button:active{background:#1d4466}
+  button.primary{background:#1f6fb2;border-color:#5fb0ff}
+  #tourbar{display:none;gap:6px}
+  body.touring #tourbar{display:flex}
+  #stats{left:8px;top:calc(62px + env(safe-area-inset-top,0));font-size:12px;line-height:1.4;background:#0b1a2acc;border:1px solid #ffffff22;border-radius:12px;padding:6px 10px;max-width:min(44vw,440px);cursor:pointer}
+  #stats b{color:#9fd3ff;font-weight:600}
+  #stats.mini{max-height:20px;overflow:hidden}
+  #sci{right:8px;top:calc(62px + env(safe-area-inset-top,0));max-width:min(48vw,480px);font-size:12px;line-height:1.45;background:#0b1a2ad9;border:1px solid #ffe9a655;border-radius:12px;padding:7px 11px;color:#ffe9a6;display:none;font-family:'Cambria Math','STIX Two Math',Georgia,serif}
+  #sci div{margin:2px 0}
+  #sub{left:8px;bottom:calc(8px + env(safe-area-inset-bottom,0));max-width:calc(100vw - min(26vw,260px) - 32px);font-size:16px;line-height:1.4;background:#000c;border-radius:12px;padding:8px 14px;display:none}
+  #pd2d{right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0));width:min(26vw,260px);height:auto;border-radius:12px;display:none}
+  #panel{right:8px;top:62px;width:min(92vw,340px);max-height:calc(100% - 80px);overflow:auto;background:#0b1a2af2;border:1px solid #ffffff33;border-radius:14px;padding:12px 14px;display:none;font-size:14px;z-index:7}
+  #panel label{display:block;margin:10px 0 2px}
+  #panel input[type=range]{width:100%;height:32px}
+  #panel .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  #panel h4{margin:14px 0 2px;color:#9fd3ff}
+  #eq{inset:0;overflow:auto;background:#07121dF5;display:none;padding:16px 18px 40px;font-size:15px;line-height:1.55;z-index:8}
+  #eq h2{color:#9fd3ff;margin:18px 0 6px;font-size:18px}
+  #eq .f{font-family:'Cambria Math','STIX Two Math',Georgia,serif;font-size:16px;background:#ffffff0d;border-left:3px solid #5fb0ff;padding:6px 10px;margin:6px 0;overflow-x:auto;white-space:nowrap}
+  #eq small{color:#9db3c6}
+  #eq table{border-collapse:collapse;font-size:14px}#eq td,#eq th{border:1px solid #ffffff22;padding:3px 8px;text-align:left}
+  #msg{left:50%;top:50%;transform:translate(-50%,-50%);background:#000c;padding:14px 18px;border-radius:14px;font-size:17px;text-align:center;display:none;max-width:80vw;z-index:9}
+  #fade{inset:0;background:#0d3a66;opacity:0;pointer-events:none;display:flex;align-items:center;justify-content:center;font-size:22px;text-align:center}
+  #fade span{display:inline-block;padding:0 12px}
+  body.vr #top,body.vr #stats,body.vr #panel,body.vr #sci,body.vr #sub,body.vr #pd2d{display:none !important}
+  body.vr.showui #top{display:flex !important}
+  body.vr #fade span{width:50%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="fade" class="ui"><span id="fadeL"></span><span id="fadeR" style="display:none"></span></div>
+<div id="top" class="ui">
+  <button id="bTour" class="primary">▶ Tour</button>
+  <span id="tourbar"><button id="bPrev">⏮</button><button id="bPause">❚❚ Pause</button><button id="bNext">⏭</button></span>
+  <button id="bVR">👓 Headset</button>
+  <button id="bDive">Dive ▸</button>
+  <button id="bSensor">📱 Sensor</button>
+  <button id="bCentre" title="Recentre">⟳</button>
+  <button id="bVoice">🎤 off</button>
+  <select id="selLang" aria-label="Narration language"><option value="en">English</option><option value="bn">বাংলা</option><option value="hi">हिन्दी</option><option value="or">ଓଡ଼ିଆ</option></select>
+  <button id="bTap" title="Tap the beaker">💧</button>
+  <button id="bSet">⚙</button>
+  <button id="bEq" title="Equations">∑</button>
+</div>
+<div id="stats" class="ui"></div>
+<div id="sci" class="ui"></div>
+<div id="sub" class="ui"></div>
+<canvas id="pd2d" class="ui" width="320" height="280"></canvas>
+<div id="panel" class="ui">
+  <h4>Free mode: choose temperature and pressure</h4>
+  <label>Temperature: <span id="vFT"></span> °C</label>
+  <input id="sFT" type="range" min="-120" max="550" step="1" value="25">
+  <label>Pressure: <span id="vFP"></span></label>
+  <input id="sFP" type="range" min="1" max="10" step="0.05" value="5.0057">
+  <div>Stable phase of real water (IAPWS): <b id="vFPh"></b></div>
+  <div class="row"><button id="bFree" class="primary">Go there</button></div>
+  <h4>Simulation</h4>
+  <label>Speed: <span id="vSp"></span></label>
+  <input id="sSp" type="range" min="0" max="7" step="1">
+  <h4>Display</h4>
+  <div class="row">
+    <button id="bStyle">Style</button><button id="bHB">H-bonds</button><button id="bTrail">Trace</button>
+    <button id="bNarr">Narration</button><button id="bDiag">Phase diagram</button>
+  </div>
+  <h4>Headset</h4>
+  <label>Lens distance (IPD): <span id="vIPD"></span> mm</label>
+  <input id="sIPD" type="range" min="50" max="75" step="1">
+  <p style="color:#9db3c6;font-size:13px"><b>Voice</b> (needs internet): "next", "previous", "pause", "resume", "repeat", "start tour", "end tour", "zoom in", "zoom out", "dive in", "back to beaker", "forward", "stop", "faster", "slower", "diagram", "recentre". Commands are ignored while the narrator speaks, except "stop"/"pause".</p>
+  <p style="color:#9db3c6;font-size:13px">Headset: tap once to show buttons; press and hold to fly forward.</p>
+</div>
+<div id="eq" class="ui">
+  <button id="bEqClose" style="float:right">Close</button>
+  <h1 style="font-size:20px;margin-top:4px">The equations behind every motion</h1>
+  <p><small>Every molecular position and orientation comes from integrating Newton's equations with the forces below. Phase boundaries come from the IAPWS correlations. The beaker surface follows linear capillary–gravity wave theory.</small></p>
+
+  <h2>1. The molecule: TIP4P/Ice</h2>
+  <div class="f">r(O–H) = 0.9572 Å, ∠HOH = 104.52°, q_H = +0.5897 e, q_M = −1.1794 e at d_OM = 0.1577 Å on the bisector</div>
+  <div class="f">Lennard-Jones on O: σ = 3.1668 Å, ε/k_B = 106.1 K &nbsp;(melting point of ice Ih in the model: 272.2 K)</div>
+  <div class="f">Massless site: <b>r</b>_M = <b>r</b>_O + a(<b>r</b>_H1 − <b>r</b>_O) + a(<b>r</b>_H2 − <b>r</b>_O), a = d_OM / (2 r_OH cos(θ/2)); F_O += (1−2a)F_M, F_H += aF_M</div>
+  <small>Abascal, Sanz, García Fernández &amp; Vega, J. Chem. Phys. 122, 234511 (2005).</small>
+
+  <h2>2. Forces</h2>
+  <div class="f">U = Σ_{i&lt;j} [ Σ_{a,b∈{H1,H2,M}} k_e q_a q_b V_DSF(r_ab) + 4ε((σ/r_OO)¹² − (σ/r_OO)⁶) ]</div>
+  <div class="f">V_DSF(r) = erfc(αr)/r − erfc(αR_c)/R_c + [erfc(αR_c)/R_c² + (2α/√π)e^(−α²R_c²)/R_c](r − R_c), &nbsp;α = 0.2 Å⁻¹, R_c = 8.5 Å</div>
+  <div class="f">Long-range LJ: U_tail/N = (8/3)πρεσ³[(1/3)(σ/R_c)⁹ − (σ/R_c)³], &nbsp; P_tail = (16/3)πρ²εσ³[(2/3)(σ/R_c)⁹ − (σ/R_c)³]</div>
+  <small>Fennell &amp; Gezelter, J. Chem. Phys. 124, 234104 (2006).</small>
+
+  <h2>3. Motion, temperature and pressure</h2>
+  <div class="f">m_k d²<b>r</b>_k/dt² = −∇_k U + Σ_c λ_c ∇_k σ_c, &nbsp; σ_c = |<b>r</b>_a − <b>r</b>_b|² − d_ab² = 0 &nbsp;(velocity Verlet + SHAKE/RATTLE, Δt = 2 fs)</div>
+  <div class="f">Thermostat (Bussi–Donadio–Parrinello 2007): <b>v</b> → α<b>v</b>, α² = c + (K̄/N_fK)(1−c)(R₁² + Σ R_i²) + 2R₁√(c(1−c)K̄/(N_fK)), c = e^(−Δt/τ)</div>
+  <div class="f">Barostat (stochastic cell rescaling, Bernetti &amp; Bussi 2020): dε = −(β_T/τ_p)(P₀ − P − k_BT/V)dt + √(2k_BTβ_T dt/(Vτ_p)) ξ, &nbsp;ε = ln V</div>
+  <div class="f">Pressure (molecular virial): P = [⅔K_com + ⅓ Σ_{i&lt;j} <b>F</b>_ij·<b>R</b>_ij]/V + P_tail</div>
+
+  <h2>4. Phase boundaries of real water (IAPWS R14-08 and SR1-86)</h2>
+  <div class="f">Ice Ih melting: p/p_t = 1 + Σ_{i=1}^{3} a_i(1 − θ^{b_i}), θ = T/273.16 K, p_t = 611.657 Pa; a = (1.19539337×10⁶, 8.08183159×10⁴, 3.33826860×10³), b = (3, 25.75, 103.75)</div>
+  <div class="f">Ice III: p/208.566 MPa = 1 − 0.2999481(1 − θ⁶⁰), θ = T/251.165 K</div>
+  <div class="f">Ice V: p/350.1 MPa = 1 − 1.18721(1 − θ⁸), θ = T/256.164 K &nbsp;·&nbsp; Ice VI: p/632.4 MPa = 1 − 1.07476(1 − θ^4.6), θ = T/273.31 K</div>
+  <div class="f">Ice VII: ln(p/2216 MPa) = 1.73683(1 − θ⁻¹) − 0.0544606(1 − θ⁵) + 0.806106×10⁻⁷(1 − θ²²), θ = T/355 K</div>
+  <div class="f">Sublimation: ln(p/p_t) = θ⁻¹ Σ a_i θ^{b_i}; a = (−21.2144006, 27.3203819, −6.10598130), b = (0.00333333333, 1.20666667, 1.70333333)</div>
+  <div class="f">Vapour pressure: ln(p/p_c) = (T_c/T)(a₁τ + a₂τ^1.5 + a₃τ³ + a₄τ^3.5 + a₅τ⁴ + a₆τ^7.5), τ = 1 − T/T_c; T_c = 647.096 K, p_c = 22.064 MPa</div>
+  <small>Checked in this app against the IAPWS check values: Ih 260 K → 138.268 MPa; III 254 K → 268.685 MPa; V 265 K → 479.640 MPa; VI 320 K → 1356.76 MPa; VII 550 K → 6308.71 MPa; sublimation 230 K → 8.94735 Pa.</small>
+
+  <h2>5. What this code gives for each phase (measured in the simulations)</h2>
+  <table>
+    <tr><th>State</th><th>T, P</th><th>ρ simulated</th><th>ρ real</th><th>H-bonds/molecule</th></tr>
+    <tr><td>Liquid</td><td>298 K, 1 bar</td><td>0.994</td><td>0.997</td><td>3.73</td></tr>
+    <tr><td>Hot liquid</td><td>353 K, 1 bar</td><td>0.965</td><td>0.972</td><td>3.51</td></tr>
+    <tr><td>Cold liquid</td><td>277 K, 1 bar</td><td>0.996</td><td>1.000</td><td>3.79</td></tr>
+    <tr><td>Supercooled</td><td>253 K, 1 bar</td><td>0.989</td><td>below its 4 °C value*</td><td>3.87</td></tr>
+    <tr><td>Ice Ih</td><td>253 K, 1 bar</td><td>0.909</td><td>0.92</td><td>4.00</td></tr>
+    <tr><td>Ice III</td><td>250 K, 0.3 GPa</td><td>1.143</td><td>1.16</td><td>3.95</td></tr>
+    <tr><td>Ice VI</td><td>300 K, 1 GPa</td><td>1.353</td><td>1.31 (at 1 bar)</td><td>3.88</td></tr>
+    <tr><td>Ice VII</td><td>300 K, 3 GPa</td><td>1.48</td><td>≈1.65 (2.5 GPa)</td><td>3.75</td></tr>
+    <tr><td>Supercritical</td><td>model-equivalent of 673 K, 25 MPa</td><td>0.160</td><td>0.167</td><td>0.78</td></tr>
+  </table>
+  <small>*Real supercooled water also gets less dense as it cools. Ice VII is under-dense in this simple model (fixed charges, 8.5 Å cut-off); its crystal structure stays intact. Ices X and superionic ice need quantum effects and are not simulated.</small>
+
+  <h2>6. Recorded simulations</h2>
+  <p><small>Melting: an ice Ih / water interface (432 molecules), overheated to 330 K so the front moves within tens of picoseconds; light-blue molecules moved less than 1.4 Å in 5 ps (still crystalline). Evaporation: a 216-molecule water film in vacuum at 550 K. Both are shown as time-lapse; freezing from supercooled water takes nanoseconds or longer and is not shown.</small></p>
+
+  <h2>7. The beaker surface</h2>
+  <div class="f">η = Σ A_mn J_m(k_mn r) cos(mθ + ψ) cos(ω_mn t + φ), J′_m(k_mn R) = 0, ω² = (gk + γk³/ρ) tanh(kh)</div>
+</div>
+<div id="msg" class="ui"></div>
+<script src="lib/three.min.js"></script>
+<script src="phase-eq.js"></script>
+<script src="narration.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
