@@ -154,5 +154,22 @@
     hi: { name: 'हिन्दी', lang: ['hi-IN', 'hi'], novoice: 'इस फ़ोन में हिंदी आवाज़ नहीं है — केवल उपशीर्षक। Settings → Text-to-speech में Hindi voice इंस्टॉल करें।' },
     or: { name: 'ଓଡ଼ିଆ', lang: ['or-IN', 'or', 'od-IN'], novoice: 'ଏହି ଫୋନରେ ଓଡ଼ିଆ ସ୍ୱର ନାହିଁ — କେବଳ ସବଟାଇଟେଲ। Settings → Text-to-speech ରେ Odia voice ଇନଷ୍ଟଲ କରନ୍ତୁ।' },
   };
-  root.TOUR = { CH, UI };
+  // spoken when the view cuts inside a material
+  const ENTER = { en: 'Now we are going inside {p}.', bn: 'এবার আমরা প্রবেশ করছি {p}-এর ভিতরে।', hi: 'अब हम {p} के अंदर जा रहे हैं।', or: 'ଏବେ ଆମେ {p} ଭିତରକୁ ଯାଉଛୁ।' };
+  const PNAME = {
+    liq298: { en: 'liquid water', bn: 'তরল জল', hi: 'द्रव जल', or: 'ତରଳ ପାଣି' },
+    liq353: { en: 'hot water at 80 degrees', bn: '৮০ ডিগ্রির গরম জল', hi: '80 डिग्री के गरम पानी', or: '80 ଡିଗ୍ରୀର ଗରମ ପାଣି' },
+    liq277: { en: 'water at 4 degrees', bn: '৪ ডিগ্রির জল', hi: '4 डिग्री के पानी', or: '4 ଡିଗ୍ରୀର ପାଣି' },
+    sc253: { en: 'supercooled water', bn: 'অতিশীতল জল', hi: 'अतिशीतित जल', or: 'ଅତିଶୀତଳ ପାଣି' },
+    ice1h: { en: 'ordinary ice, ice one h', bn: 'সাধারণ বরফ, আইস ওয়ান এইচ', hi: 'साधारण बर्फ, आइस वन एच', or: 'ସାଧାରଣ ବରଫ, ଆଇସ ୱାନ ଏଚ' },
+    ice3: { en: 'ice three', bn: 'আইস থ্রি', hi: 'आइस थ्री', or: 'ଆଇସ ଥ୍ରୀ' },
+    ice6: { en: 'ice six', bn: 'আইস সিক্স', hi: 'आइस सिक्स', or: 'ଆଇସ ସିକ୍ସ' },
+    ice7: { en: 'ice seven', bn: 'আইস সেভেন', hi: 'आइस सेवन', or: 'ଆଇସ ସେଭେନ' },
+    rec_melt: { en: 'melting ice', bn: 'গলন্ত বরফ', hi: 'पिघलती बर्फ', or: 'ତରଳୁଥିବା ବରଫ' },
+    rec_evap: { en: 'the surface of very hot water', bn: 'খুব গরম জলের পৃষ্ঠ', hi: 'बहुत गरम पानी की सतह', or: 'ବହୁତ ଗରମ ପାଣିର ପୃଷ୍ଠ' },
+    vap373: { en: 'steam', bn: 'বাষ্প', hi: 'भाप', or: 'ବାଷ୍ପ' },
+    iceslab: { en: 'the surface of ice in a vacuum', bn: 'শূন্যস্থানে বরফের পৃষ্ঠ', hi: 'निर्वात में बर्फ की सतह', or: 'ଶୂନ୍ୟସ୍ଥାନରେ ବରଫର ପୃଷ୍ଠ' },
+    scf: { en: 'supercritical water', bn: 'অতিসংকট জল', hi: 'अतिक्रांतिक जल', or: 'ଅତିସଂକଟ ପାଣି' },
+  };
+  root.TOUR = { CH, UI, ENTER, PNAME };
 })(typeof self !== 'undefined' ? self : this);

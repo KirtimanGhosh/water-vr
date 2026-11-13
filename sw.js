@@ -1,5 +1,5 @@
 /* Service worker: offline support. Increase V on every update. */
-const V = 'water-vr-v3';
+const V = 'water-vr-v5';
 const FILES = ['./', 'index.html', 'app.js', 'md2.js', 'md-worker.js', 'phase-eq.js', 'narration.js', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'lib/three.min.js',
   ...['liq298', 'liq353', 'liq277', 'sc253', 'ice1h', 'ice3', 'ice6', 'ice7', 'vap373', 'scf', 'iceslab'].map((n) => 'data/st_' + n + '.json'),

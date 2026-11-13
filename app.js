@@ -32,19 +32,19 @@
   function label(text, w = 0.16, color = '#ffffff', bg = 'rgba(10,25,40,0.75)') {
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d');
     c.fillStyle = bg; c.beginPath(); c.roundRect ? c.roundRect(4, 4, 504, 120, 24) : c.rect(4, 4, 504, 120); c.fill();
-    c.fillStyle = color; c.font = '600 46px system-ui,sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, 256, 66);
+    c.fillStyle = color; let fs = 46; do { c.font = `600 ${fs}px system-ui,sans-serif`; fs -= 2; } while (c.measureText(text).width > 470 && fs > 18); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, 256, 66);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }));
     sp.scale.set(w, w / 4, 1); return sp;
   }
 
   // ---------- macro world: room, table and the apparatus for each phase ----------
   const macro = new THREE.Group(); scene.add(macro);
-  const TY = -0.12, TZ = -0.33;            // table top height, apparatus distance
+  const TY = -0.25, TZ = -0.5;            // table top height, apparatus distance
   {
     const floorY = TY - 0.76;
     const wood = new THREE.MeshStandardMaterial({ color: 0x7a5a40, roughness: 0.8 });
-    const top = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.03, 0.8), wood); top.position.set(0, TY - 0.015, -0.5); macro.add(top);
-    for (const [lx, lz] of [[-0.65, -0.14], [0.65, -0.14], [-0.65, -0.86], [0.65, -0.86]]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.73, 0.05), wood); leg.position.set(lx, floorY + 0.365, lz); macro.add(leg); }
+    const top = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.03, 0.8), wood); top.position.set(0, TY - 0.015, TZ); macro.add(top);
+    for (const [lx, lz] of [[-0.65, TZ + 0.36], [0.65, TZ + 0.36], [-0.65, TZ - 0.36], [0.65, TZ - 0.36]]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.73, 0.05), wood); leg.position.set(lx, floorY + 0.365, lz); macro.add(leg); }
     const wall = (c) => new THREE.MeshStandardMaterial({ color: c, side: THREE.BackSide });
     const room = new THREE.Mesh(new THREE.BoxGeometry(5, 3, 5), [wall(0xc9d3dc), wall(0xc9d3dc), wall(0xeef2f5), wall(0x5d6670), wall(0xb7c4cf), wall(0xb7c4cf)]);
     room.position.set(0, floorY + 1.5, 0); macro.add(room);
@@ -58,16 +58,16 @@
   function addScene(name, focus) { const g = new THREE.Group(); g.visible = false; macro.add(g); SCENES[name] = { g, focus }; return g; }
 
   // beaker with real-time standing capillary–gravity waves
-  const BK = { R: 0.04, H: 0.11, h: 0.08 };
+  const BK = { R: 0.075, H: 0.2, h: 0.15 };   // a 2-litre beaker
   function besselJ(m, x) { let s = 0, term = Math.pow(x / 2, m); for (let k = 1; k <= m; k++) term /= k; for (let k = 0; k < 40; k++) { s += term; term *= -(x * x / 4) / ((k + 1) * (k + 1 + m)); if (Math.abs(term) < 1e-14) break; } return s; }
   const ROOTS = [[1, 1.8412], [2, 3.0542], [0, 3.8317], [3, 4.2012], [1, 5.3314], [4, 5.3176], [2, 6.7061], [0, 7.0156]];
-  const modes = ROOTS.map(([m, j], i) => { const k = j / BK.R, w = Math.sqrt((9.81 * k + 0.0728 / 998 * k * k * k) * Math.tanh(k * BK.h)); return { m, k, w, beta: Math.sqrt(1e-6 * w / 2) / BK.R, psi: Math.random() * 6.283, phi: Math.random() * 6.283, A0: 0.00018 / (1 + 0.4 * i), At: 0, t0: 0 }; });
+  const modes = ROOTS.map(([m, j], i) => { const k = j / BK.R, w = Math.sqrt((9.81 * k + 0.0728 / 998 * k * k * k) * Math.tanh(k * BK.h)); return { m, k, w, beta: Math.sqrt(1e-6 * w / 2) / BK.R, psi: Math.random() * 6.283, phi: Math.random() * 6.283, A0: 0.0003 / (1 + 0.4 * i), At: 0, t0: 0 }; });
   function makeBeaker(withBubbles) {
     const g = new THREE.Group(); g.position.set(0, TY, TZ);
     const glass = new THREE.Mesh(new THREE.CylinderGeometry(BK.R + 0.0018, BK.R + 0.0018, BK.H, 64, 1, true), glassMat); glass.position.y = BK.H / 2; glass.renderOrder = 3; g.add(glass);
     const gb = new THREE.Mesh(new THREE.CircleGeometry(BK.R + 0.0018, 64), glassMat); gb.rotation.x = -Math.PI / 2; gb.position.y = 0.0004; g.add(gb);
     const p = [];
-    for (let i = 1; i <= 10; i++) { const y = i * 0.01, a0 = Math.PI * 0.62, a1 = a0 + (i % 5 ? 0.18 : 0.32); for (let k = 0; k < 8; k++) { const t0 = a0 + (a1 - a0) * k / 8, t1 = a0 + (a1 - a0) * (k + 1) / 8, r = BK.R + 0.002; p.push(r * Math.cos(t0), y, r * Math.sin(t0), r * Math.cos(t1), y, r * Math.sin(t1)); } }
+    for (let i = 1; i <= 10; i++) { const y = i * 0.015, a0 = Math.PI * 0.62, a1 = a0 + (i % 5 ? 0.18 : 0.32); for (let k = 0; k < 8; k++) { const t0 = a0 + (a1 - a0) * k / 8, t1 = a0 + (a1 - a0) * (k + 1) / 8, r = BK.R + 0.002; p.push(r * Math.cos(t0), y, r * Math.sin(t0), r * Math.cos(t1), y, r * Math.sin(t1)); } }
     const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 })));
     const wm = new THREE.MeshPhongMaterial({ color: 0x3f8fd0, transparent: true, opacity: 0.5, shininess: 60, side: THREE.DoubleSide, depthWrite: false });
     const ws = new THREE.Mesh(new THREE.CylinderGeometry(BK.R, BK.R, BK.h, 64, 1, true), wm); ws.position.y = BK.h / 2; ws.renderOrder = 1; g.add(ws);
@@ -90,9 +90,9 @@
     if (withBubbles) {
       // vapour bubbles rising at an approximately constant terminal speed (drawn approximately)
       const NB = 70, bm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, shininess: 120 }), NB);
-      const bs = Array.from({ length: NB }, () => ({ x: (Math.random() - 0.5) * 1.4 * BK.R, z: (Math.random() - 0.5) * 1.4 * BK.R, y: Math.random() * BK.h, r: 0.0008 + Math.random() * 0.0022 }));
+      const bs = Array.from({ length: NB }, () => ({ x: (Math.random() - 0.5) * 1.4 * BK.R, z: (Math.random() - 0.5) * 1.4 * BK.R, y: Math.random() * BK.h, r: 0.0012 + Math.random() * 0.003 }));
       g.add(bm); const M = new THREE.Matrix4();
-      const heater = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.012, 48), new THREE.MeshStandardMaterial({ color: 0x444a52, emissive: 0x551100 })); heater.position.y = -0.006; g.add(heater);
+      const heater = new THREE.Mesh(new THREE.CylinderGeometry(BK.R * 1.8, BK.R * 1.8, 0.012, 48), new THREE.MeshStandardMaterial({ color: 0x444a52, emissive: 0x551100 })); heater.position.y = -0.006; g.add(heater);
       g.position.y = TY + 0.012;
       const pc = document.createElement('canvas'); pc.width = pc.height = 64; const pctx = pc.getContext('2d'), grd = pctx.createRadialGradient(32, 32, 0, 32, 32, 32);
       grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(1, 'rgba(255,255,255,0)'); pctx.fillStyle = grd; pctx.fillRect(0, 0, 64, 64);
@@ -103,13 +103,13 @@
         up0(t);
         bs.forEach((b, i) => { b.y += (0.18 + 60 * b.r) * dt; b.r *= 1 + 0.25 * dt; if (b.y > BK.h) { b.y = 0.002; b.r = 0.0008 + Math.random() * 0.0015; b.x = (Math.random() - 0.5) * 1.4 * BK.R; b.z = (Math.random() - 0.5) * 1.4 * BK.R; } M.makeScale(b.r, b.r, b.r).setPosition(b.x + 0.002 * Math.sin(20 * t + i), b.y, b.z); bm.setMatrixAt(i, M); });
         bm.instanceMatrix.needsUpdate = true;
-        steam.forEach((o) => { const u = (t * 0.25 + o.ph) % 1; o.s.position.set(0.02 * Math.sin(o.ph * 40 + t), BK.H + 0.01 + u * 0.18, 0.02 * Math.cos(o.ph * 30)); const sz = 0.03 + u * 0.08; o.s.scale.set(sz, sz, 1); o.s.material.opacity = 0.35 * Math.sin(Math.PI * u); });
+        steam.forEach((o) => { const u = (t * 0.25 + o.ph) % 1; o.s.position.set(0.035 * Math.sin(o.ph * 40 + t), BK.H + 0.01 + u * 0.3, 0.035 * Math.cos(o.ph * 30)); const sz = 0.05 + u * 0.14; o.s.scale.set(sz, sz, 1); o.s.material.opacity = 0.35 * Math.sin(Math.PI * u); });
       };
     }
     return g;
   }
   { const g = addScene('beaker', new THREE.Vector3(0, TY + BK.h * 0.55, TZ)); g.add(makeBeaker(false)); }
-  { const g = addScene('boiling', new THREE.Vector3(0, TY + BK.h * 0.85, TZ)); g.add(makeBeaker(true)); const l = label('100 °C · 1 atm'); l.position.set(0.1, TY + 0.15, TZ); g.add(l); }
+  { const g = addScene('boiling', new THREE.Vector3(0, TY + BK.h * 0.85, TZ)); g.add(makeBeaker(true)); const l = label('100 °C · 1 atm', 0.24); l.position.set(0.2, TY + 0.28, TZ); g.add(l); }
   function iceBlock(white, size = 0.07) {
     const g = new THREE.Group();
     const m = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), new THREE.MeshPhongMaterial({ color: white ? 0xf2f6fa : 0xcfe9ff, transparent: true, opacity: white ? 0.82 : 0.3, shininess: 160, specular: 0xffffff, depthWrite: false }));
@@ -122,12 +122,12 @@
     }
     return g;
   }
-  { const g = addScene('iceblock', new THREE.Vector3(0, TY + 0.035, TZ)); const b = iceBlock(false); b.position.set(0, TY, TZ); g.add(b); const l = label('ice Ih · −20 °C'); l.position.set(0.09, TY + 0.1, TZ); g.add(l); }
+  { const g = addScene('iceblock', new THREE.Vector3(0, TY + 0.035, TZ)); const b = iceBlock(false); b.position.set(0, TY, TZ); g.add(b); const l = label('ice Ih · −20 °C', 0.08); l.position.set(0.075, TY + 0.085, TZ); g.add(l); }
   {
     const g = addScene('twoblocks', new THREE.Vector3(0, TY + 0.035, TZ));
     const a = iceBlock(false); a.position.set(-0.06, TY, TZ); g.add(a); const b = iceBlock(true); b.position.set(0.06, TY, TZ); g.add(b);
-    const l1 = label('clear: slow, one direction', 0.17); l1.position.set(-0.07, TY + 0.11, TZ); g.add(l1);
-    const l2 = label('white: fast, air trapped', 0.17); l2.position.set(0.07, TY + 0.11, TZ); g.add(l2);
+    const l1 = label('clear: slow, one direction', 0.1); l1.position.set(-0.065, TY + 0.088, TZ); g.add(l1);
+    const l2 = label('white: fast, air trapped', 0.1); l2.position.set(0.065, TY + 0.1, TZ); g.add(l2);
   }
   let dacLabel = null;
   {
@@ -141,17 +141,17 @@
     const d2 = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.003, 0.026, 8), dia); d2.position.set(0, TY + 0.077, TZ); g.add(d2);
     const gasket = new THREE.Mesh(new THREE.TorusGeometry(0.006, 0.0025, 12, 32), steel); gasket.rotation.x = Math.PI / 2; gasket.position.set(0, TY + 0.06, TZ); g.add(gasket);
     const sample = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.002, 24), new THREE.MeshBasicMaterial({ color: 0x8fd8ff })); sample.position.set(0, TY + 0.06, TZ); g.add(sample);
-    dacLabel = label('300 MPa'); dacLabel.position.set(0.1, TY + 0.13, TZ); g.add(dacLabel);
-    const l2 = label('diamond anvil cell (enlarged)', 0.2); l2.position.set(-0.1, TY + 0.15, TZ); g.add(l2);
+    dacLabel = label('300 MPa', 0.07); dacLabel.position.set(0.075, TY + 0.125, TZ); g.add(dacLabel);
+    const l2 = label('diamond anvil cell (enlarged)', 0.1); l2.position.set(-0.08, TY + 0.14, TZ); g.add(l2);
   }
   {
     const g = addScene('belljar', new THREE.Vector3(0, TY + 0.03, TZ));
     const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.008, 48), new THREE.MeshStandardMaterial({ color: 0x555d66, metalness: 0.6, roughness: 0.4 })); plate.position.set(0, TY + 0.004, TZ); g.add(plate);
     const jar = new THREE.Mesh(new THREE.SphereGeometry(0.08, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), glassMat); jar.scale.y = 1.4; jar.position.set(0, TY + 0.008, TZ); g.add(jar);
     const b = iceBlock(false, 0.045); b.position.set(0, TY + 0.008, TZ); g.add(b);
-    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.25, 12), new THREE.MeshStandardMaterial({ color: 0x333333 })); pipe.rotation.z = Math.PI / 2; pipe.position.set(0.2, TY + 0.004, TZ); g.add(pipe);
-    const pump = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.09, 0.09), new THREE.MeshStandardMaterial({ color: 0x2f6fa8 })); pump.position.set(0.36, TY + 0.045, TZ); g.add(pump);
-    const l = label('50 Pa · −20 °C'); l.position.set(0, TY + 0.16, TZ); g.add(l);
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.12, 12), new THREE.MeshStandardMaterial({ color: 0x333333 })); pipe.rotation.z = Math.PI / 2; pipe.position.set(0.15, TY + 0.004, TZ); g.add(pipe);
+    const pump = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.045, 0.045), new THREE.MeshStandardMaterial({ color: 0x2f6fa8 })); pump.position.set(0.21, TY + 0.0225, TZ); g.add(pump);
+    const l = label('50 Pa · −20 °C', 0.08); l.position.set(0, TY + 0.14, TZ); g.add(l);
   }
   {
     const g = addScene('vessel', new THREE.Vector3(0, TY + 0.06, TZ + 0.045));
@@ -160,19 +160,22 @@
     const win = new THREE.Mesh(new THREE.CircleGeometry(0.02, 32), new THREE.MeshBasicMaterial({ color: 0xffb26b })); win.position.set(0, TY + 0.06, TZ + 0.0505); g.add(win);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.021, 0.003, 12, 32), steel); ring.position.copy(win.position); g.add(ring);
     const gauge = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.006, 32), new THREE.MeshStandardMaterial({ color: 0xffffff })); gauge.rotation.x = Math.PI / 2; gauge.position.set(0.035, TY + 0.14, TZ); g.add(gauge);
-    const l = label('400 °C · 25 MPa'); l.position.set(-0.11, TY + 0.13, TZ); g.add(l);
+    const l = label('400 °C · 25 MPa', 0.08); l.position.set(-0.09, TY + 0.13, TZ); g.add(l);
   }
+  { const k = 2.2, pivot = new THREE.Vector3(0, TY, TZ);
+    for (const n of ['iceblock', 'twoblocks', 'dac', 'belljar', 'vessel']) { const sc = SCENES[n]; sc.g.scale.setScalar(k); sc.g.position.copy(pivot).multiplyScalar(1 - k); sc.focus.sub(pivot).multiplyScalar(k).add(pivot); } }
   let macroName = 'beaker';
   function setMacro(name) { macroName = SCENES[name] ? name : 'beaker'; for (const k in SCENES) SCENES[k].g.visible = k === macroName; }
   setMacro('beaker');
-  function tapBeaker() { const t = performance.now() / 1000; modes.forEach((md, i) => { const cur = md.At * Math.exp(-md.beta * (t - md.t0)); md.At = cur + (i < 3 ? 0.0016 : 0.0006) * (0.5 + Math.random()); md.t0 = t; }); }
+  function tapBeaker() { const t = performance.now() / 1000; modes.forEach((md, i) => { const cur = md.At * Math.exp(-md.beta * (t - md.t0)); md.At = cur + (i < 3 ? 0.003 : 0.0011) * (0.5 + Math.random()); md.t0 = t; }); }
 
   // ---------- molecular world ----------
   const mol = new THREE.Group(); mol.visible = false; scene.add(mol);
   const MAXM = 7000;  // molecules drawn at once (after distance culling)
   const matO = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, metalness: 0.05 });
   const matH = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
-  const matB = new THREE.MeshStandardMaterial({ color: 0xc9d1d8, roughness: 0.5 });
+  const matB = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+  const BGC = [0.04, 0.14, 0.25];   // background (fog) colour, linear-ish
   const mk = (g, m, n) => { const x = new THREE.InstancedMesh(g, m, n); x.frustumCulled = false; x.instanceMatrix.setUsage(THREE.DynamicDrawUsage); x.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(3 * n), 3); x.instanceColor.setUsage(THREE.DynamicDrawUsage); x.count = 0; mol.add(x); return x; };
   const mO = mk(new THREE.IcosahedronGeometry(1, 2), matO, MAXM), mH = mk(new THREE.IcosahedronGeometry(1, 1), matH, 2 * MAXM), mB = mk(new THREE.CylinderGeometry(1, 1, 1, 8, 1, true), matB, 2 * MAXM);
   const MAXHB = 9000, hbPos = new Float32Array(MAXHB * 6), hbDist = new Float32Array(MAXHB * 2), hbGeo = new THREE.BufferGeometry();
@@ -209,11 +212,11 @@
     // viewer position in the box frame (Å)
     mol.updateMatrixWorld(true); tmpV.set(0, 0, 0); mol.worldToLocal(tmpV);
     const vx = tmpV.x, vy = tmpV.y, vz = tmpV.z;
-    const s = molScale, r0 = COMFORT / s, r1 = (COMFORT + 0.15) / s;
+    const s = molScale, r0 = COMFORT / s, r1 = (COMFORT + 0.25) / s;
     const cull = u < 0.6 ? 1e9 : (def.cull || ((def.fog || 12) + 4)) + r0;
     const cull2 = cull * cull;
     const imgs = u < 0.55 ? [[0, 0, 0]] : IMGS(slab);
-    const aO = mO.instanceMatrix.array, aH = mH.instanceMatrix.array, aB = mB.instanceMatrix.array, cO = mO.instanceColor.array, cH = mH.instanceColor.array;
+    const aO = mO.instanceMatrix.array, aH = mH.instanceMatrix.array, aB = mB.instanceMatrix.array, cO = mO.instanceColor.array, cH = mH.instanceColor.array, cB = mB.instanceColor.array;
     let n = 0;
     for (const [ix, iy, iz] of imgs) {
       const ox0 = ix * Lx, oy0 = iy * Ly, oz0 = iz * Lz;
@@ -223,24 +226,27 @@
         const dx = px - vx, dy = py - vy, dz = pz - vz, d2 = dx * dx + dy * dy + dz * dz;
         if (d2 > cull2) continue;
         let f = 1; if (d2 < r1 * r1) { if (d2 <= r0 * r0) continue; const t = (Math.sqrt(d2) - r0) / (r1 - r0); f = t * t * (3 - 2 * t); }
-        writeS(aO, n, px, py, pz, R.O * f);
+        // true size always; near the comfort bubble the molecule fades into the background colour instead of shrinking
+        writeS(aO, n, px, py, pz, R.O);
         let co = COL.O, ch = COL.H;
         if (m === TAG && cfg.trail && !def.rec) { co = COL.tagO; ch = COL.tagH; }
         else if (def.net && cur.net && cur.net[m] === 1) { co = COL.net1; ch = COL.net1H; }
         else if (def.colorIce && cur.iceLike && cur.iceLike[m]) { co = COL.ice; ch = COL.iceH; }
-        cO[3 * n] = co[0]; cO[3 * n + 1] = co[1]; cO[3 * n + 2] = co[2];
+        const g0 = 1 - f, bg = BGC;
+        cO[3 * n] = co[0] * f + bg[0] * g0; cO[3 * n + 1] = co[1] * f + bg[1] * g0; cO[3 * n + 2] = co[2] * f + bg[2] * g0;
         for (let k = 0; k < 2; k++) {
           const hx = X[o + 3 + 3 * k] + ox0, hy = X[o + 4 + 3 * k] + oy0, hz = X[o + 5 + 3 * k] + oz0, q = 2 * n + k;
-          writeS(aH, q, hx, hy, hz, R.H * f);
-          cH[3 * q] = ch[0]; cH[3 * q + 1] = ch[1]; cH[3 * q + 2] = ch[2];
-          writeBond(aB, q, px, py, pz, hx, hy, hz, R.B * f);
+          writeS(aH, q, hx, hy, hz, R.H);
+          cH[3 * q] = ch[0] * f + bg[0] * g0; cH[3 * q + 1] = ch[1] * f + bg[1] * g0; cH[3 * q + 2] = ch[2] * f + bg[2] * g0;
+          cB[3 * q] = 0.79 * f + bg[0] * g0; cB[3 * q + 1] = 0.82 * f + bg[1] * g0; cB[3 * q + 2] = 0.85 * f + bg[2] * g0;
+          writeBond(aB, q, px, py, pz, hx, hy, hz, R.B);
         }
         n++;
       }
     }
     mO.count = n; mH.count = mB.count = 2 * n;
     mO.instanceMatrix.needsUpdate = mH.instanceMatrix.needsUpdate = mB.instanceMatrix.needsUpdate = true;
-    mO.instanceColor.needsUpdate = mH.instanceColor.needsUpdate = true;
+    mO.instanceColor.needsUpdate = mH.instanceColor.needsUpdate = mB.instanceColor.needsUpdate = true;
     mB.visible = !cfg.style;
     // hydrogen bonds
     let nh = 0;
@@ -394,53 +400,42 @@
   const camBase = new THREE.Vector3();
   let mag = 1, stage = 'macro', lastMolU = 0;
   const ease = (u) => u * u * (3 - 2 * u);
+  // zoom < 0.4: in the room, moving toward the apparatus;  zoom ≥ 0.4: inside the material (cut, no blue screen);  zoom > 1: extra magnification
   function applyZoom() {
-    const z = zoom; let fade = 0;
-    const focus = SCENES[macroName].focus, D0 = focus.length(), DMIN = 0.004;
+    const z = zoom;
+    const focus = SCENES[macroName].focus, D0 = focus.length(), DA = 0.25;
     if (z < 0.4) {
       stage = 'macro';
-      const u = ease(z / 0.4), d = D0 * Math.pow(DMIN / D0, u);
+      const u = ease(z / 0.4), d = D0 * Math.pow(DA / D0, u);
       camBase.copy(focus).addScaledVector(focus.clone().normalize(), -d);
-      mag = D0 / d; fade = z > 0.3 ? (z - 0.3) / 0.1 : 0;
-    } else if (z < 0.6) {
-      stage = 'fade'; fade = 1; camBase.set(0, 0, 0);
-      const u = (z - 0.4) / 0.2; mag = Math.pow(10, Math.log10(D0 / DMIN) * (1 - u) + Math.log10(S0 * 1e10) * u);
+      mag = 1;
     } else {
-      stage = 'mol'; camBase.set(0, 0, 0);
-      const u = ease(Math.min(1, (z - 0.6) / 0.4)); lastMolU = u;
-      const extra = Math.pow(S_MAX_F, Math.max(0, z - 1) / (ZMAX - 1));
-      const S1 = molScaleFull;
-      molScale = S0 * Math.pow(S1 / S0, u) * extra;
-      fade = z < 0.68 ? 1 - (z - 0.6) / 0.08 : 0;
+      stage = 'mol'; camBase.set(0, 0, 0); lastMolU = 1;
+      molScale = molScaleFull * Math.pow(S_MAX_F, Math.max(0, z - 1) / (ZMAX - 1));
       if (cur.ready && pendingLoad === cur.name && (cur.X)) { placeViewer(); pendingLoad = null; }
       mol.scale.setScalar(molScale);
       mol.quaternion.copy(qAxis);
-      const C = cubeDir.clone().multiplyScalar(CUBE_D * (1 - u));
-      // the box point under the viewer: viewPt + viewOff (wrapped for periodic axes); at u<1 aim at box centre
       const vp = tmpP.copy(viewPt).add(viewOff);
-      if (u < 0.999) vp.lerp(tmpQ.set(cur.box[0] / 2, cur.box[1] / 2, cur.box[2] / 2), 1 - u);
-      mol.position.copy(C).sub(vp.applyQuaternion(qAxis).multiplyScalar(molScale));
-      const rb = COMFORT / molScale, dist = C.length(), fg = cur.def.fog || 12;
-      scene.fog.near = dist + (rb + 3 + 40 * (1 - u)) * molScale; scene.fog.far = dist + (rb + fg + 60 * (1 - u)) * molScale;
+      mol.position.copy(vp.applyQuaternion(qAxis).multiplyScalar(-molScale));
+      const rb = COMFORT / molScale, fg = cur.def.fog || 12;
+      scene.fog.near = (rb + 3) * molScale; scene.fog.far = (rb + fg) * molScale;
       mag = molScale * 1e10;
     }
     camera.near = stage === 'mol' ? 0.05 : 0.004;
     macro.visible = stage === 'macro'; mol.visible = stage === 'mol';
     scene.background.copy(stage === 'mol' ? BG_MOL : BG_MACRO);
     if (stage !== 'mol') { scene.fog.near = 1000; scene.fog.far = 2000; }
-    $('fade').style.opacity = fade.toFixed(3);
-    const txt = fade > 0.05 ? `×${fmtMag(mag)}` : '';
-    $('fadeL').textContent = txt; $('fadeR').textContent = txt;
-    $('bDive').textContent = zoomTarget > 0.5 ? '◂ Out' : 'Dive ▸';
+    $('fade').style.opacity = '0'; $('fadeL').textContent = ''; $('fadeR').textContent = '';
+    $('bDive').textContent = zoomTarget >= 0.4 ? '◂ Out' : 'Dive ▸';
   }
   const tmpP = new THREE.Vector3(), tmpQ = new THREE.Vector3();
   function fmtMag(m) { if (m < 1000) return m.toFixed(m < 10 ? 1 : 0); const e = Math.floor(Math.log10(m)); return (m / Math.pow(10, e)).toFixed(1) + '×10' + sup(e); }
   function sup(n) { return String(n).split('').map((c) => '⁰¹²³⁴⁵⁶⁷⁸⁹⁻'['0123456789-'.indexOf(c)] || c).join(''); }
   function goZoom(t) {
-    if (t >= 0.6 && zoom < 0.6) { const f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); f.y = 0; if (f.lengthSq() > 1e-4) cubeDir.copy(f.normalize()); viewOff.set(0, 0, 0); }
+    if (t >= 0.4 && zoom < 0.4) viewOff.set(0, 0, 0);
     zoomTarget = Math.max(0, Math.min(ZMAX, t));
   }
-  const STOPS = [0, 0.14, 0.28, 0.75, 0.88, 1.0, 1.2, 1.4];
+  const STOPS = [0, 0.14, 0.28, 1.0, 1.2, 1.4];
   function zoomStep(d) { const c = zoomTarget; if (d > 0) goZoom(STOPS.find((v) => v > c + 0.01) ?? ZMAX); else goZoom([...STOPS].reverse().find((v) => v < c - 0.01) ?? 0); }
   $('bDive').onclick = () => goZoom(zoomTarget > 0.5 ? 0 : 1);
   $('bTap').onclick = tapBeaker;
@@ -501,33 +496,40 @@
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
 
   // ---------- phase diagram (IAPWS) ----------
-  const pdCv = document.createElement('canvas'); pdCv.width = 640; pdCv.height = 560;
-  const pdTex = new THREE.CanvasTexture(pdCv);
-  const pdPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.3675), new THREE.MeshBasicMaterial({ map: pdTex, transparent: true, depthTest: false, depthWrite: false, fog: false }));
-  pdPlane.position.set(-0.52, 0.2, -1.15); pdPlane.rotation.y = 0.35; pdPlane.renderOrder = 11; camera.add(pdPlane);
-  const PD = { x0: 70, x1: 620, y0: 500, y1: 30, Tmin: 150, Tmax: 800, lpMin: -5, lpMax: 4.6 };
+  // Panels around the viewer that follow the head's turning (yaw) only: phase diagram on the ceiling,
+  // equations / narration / numbers on the floor. They sit outside the straight-ahead view (≥ 45° up or down).
+  const rig = new THREE.Group(); scene.add(rig); let rigYaw = 0;
+  const PANEL_D = 1.35;
+  function panelAt(cv, w, h, elevDeg) {
+    const tex = new THREE.CanvasTexture(cv); tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false, fog: false }));
+    const e = elevDeg * Math.PI / 180; m.position.set(0, PANEL_D * Math.sin(e), -PANEL_D * Math.cos(e)); m.lookAt(0, 0, 0); m.renderOrder = 20; rig.add(m);
+    return { m, tex };
+  }
+  const PDK = 2, pdCv = document.createElement('canvas'); pdCv.width = 640 * PDK; pdCv.height = 560 * PDK;
+  const { m: pdPlane, tex: pdTex } = panelAt(pdCv, 1.5, 1.3125, 72);
+  const PD = { x0: 92, x1: 620, y0: 500, y1: 44, Tmin: 150, Tmax: 800, lpMin: -5, lpMax: 4.6 };
   const px = (T) => PD.x0 + (T - PD.Tmin) / (PD.Tmax - PD.Tmin) * (PD.x1 - PD.x0);
   const py = (pMPa) => PD.y0 - (Math.log10(pMPa) - PD.lpMin) / (PD.lpMax - PD.lpMin) * (PD.y0 - PD.y1);
   let pdMarker = { T: 298.15, P: 0.101325 }; const pdPath = [];
   function drawPD() {
-    const c = pdCv.getContext('2d'); c.clearRect(0, 0, 640, 560);
+    const c = pdCv.getContext('2d'); c.setTransform(PDK, 0, 0, PDK, 0, 0); c.clearRect(0, 0, 640, 560);
     c.fillStyle = 'rgba(8,22,38,0.86)'; c.beginPath(); c.roundRect ? c.roundRect(2, 2, 636, 556, 24) : c.rect(2, 2, 636, 556); c.fill();
-    c.strokeStyle = '#4b6378'; c.lineWidth = 1; c.font = '20px system-ui,sans-serif'; c.fillStyle = '#9db3c6';
+    c.strokeStyle = '#4b6378'; c.lineWidth = 1; c.font = '23px system-ui,sans-serif'; c.fillStyle = '#c8d8e6';
     for (let lp = -4; lp <= 4; lp++) { const y = py(Math.pow(10, lp)); c.beginPath(); c.moveTo(PD.x0, y); c.lineTo(PD.x1, y); c.stroke(); const lab = lp <= -1 ? (Math.pow(10, lp + 6) >= 1 ? Math.pow(10, lp + 6).toFixed(0) + ' Pa' : '') : lp < 3 ? (Math.pow(10, lp)).toFixed(lp < 0 ? 1 : 0) + ' MPa' : (Math.pow(10, lp - 3)).toFixed(0) + ' GPa'; if (lab) c.fillText(lab, 4, y + 6); }
     for (let T = 200; T <= 800; T += 100) { const x = px(T); c.beginPath(); c.moveTo(x, PD.y0); c.lineTo(x, PD.y1); c.stroke(); c.fillText(T + ' K', x - 22, PD.y0 + 26); }
     const curve = (f, a, b, col) => { c.strokeStyle = col; c.lineWidth = 3.5; c.beginPath(); for (let i = 0; i <= 80; i++) { const T = a + (b - a) * i / 80, p = f(T); const X = px(T), Y = py(p); i ? c.lineTo(X, Y) : c.moveTo(X, Y); } c.stroke(); };
     curve(PH.subl, 150, 273.16, '#e8f1f8'); curve(PH.sat, 273.16, 647.096, '#e8f1f8');
     curve(PH.meltIh, 251.165, 273.16, '#e8f1f8'); curve(PH.meltIII, 251.165, 256.164, '#e8f1f8'); curve(PH.meltV, 256.164, 273.31, '#e8f1f8'); curve(PH.meltVI, 273.31, 355, '#e8f1f8'); curve(PH.meltVII, 355, 715, '#e8f1f8');
     c.fillStyle = '#ffd23a'; c.beginPath(); c.arc(px(647.096), py(22.064), 6, 0, 7); c.fill(); c.beginPath(); c.arc(px(273.16), py(611.657e-6), 6, 0, 7); c.fill();
-    c.font = '600 22px system-ui,sans-serif'; c.fillStyle = '#cfe6ff';
-    [['Ice Ih', 185, 0.02], ['Liquid', 380, 50], ['Vapour', 520, 0.0004], ['Supercritical', 655, 120], ['III', 222, 270], ['V', 236, 470], ['VI', 268, 1300], ['VII', 420, 9000]].forEach(([t, T, p]) => c.fillText(t, px(T), py(p)));
-    c.font = '18px system-ui,sans-serif'; c.fillStyle = '#ffd23a'; c.fillText('critical point', px(560), py(40)); c.fillText('triple point', px(272), py(611.657e-6) + 26);
+    c.font = '700 26px system-ui,sans-serif'; c.fillStyle = '#cfe6ff';
+    [['Ice Ih', 185, 0.02], ['Liquid', 380, 50], ['Vapour', 520, 0.0004], ['Supercritical', 600, 300], ['III', 222, 270], ['V', 236, 470], ['VI', 268, 1300], ['VII', 420, 9000]].forEach(([t, T, p]) => c.fillText(t, px(T), py(p)));
+    c.font = '600 20px system-ui,sans-serif'; c.fillStyle = '#ffd23a'; c.fillText('critical point', px(560), py(40)); c.fillText('triple point', px(272), py(611.657e-6) + 26);
     if (pdPath.length > 1) { c.strokeStyle = 'rgba(255,210,58,0.6)'; c.lineWidth = 2; c.setLineDash([6, 6]); c.beginPath(); pdPath.forEach((q, i) => { const X = px(q.T), Y = py(q.P); i ? c.lineTo(X, Y) : c.moveTo(X, Y); }); c.stroke(); c.setLineDash([]); }
     c.fillStyle = '#ff4d4d'; c.strokeStyle = '#fff'; c.lineWidth = 3; c.beginPath(); c.arc(px(pdMarker.T), py(pdMarker.P), 11, 0, 7); c.fill(); c.stroke();
-    c.font = '600 22px system-ui,sans-serif'; c.fillStyle = '#ffffff';
+    c.font = '700 26px system-ui,sans-serif'; c.fillStyle = '#ffffff';
     c.fillText(`${(pdMarker.T - 273.15).toFixed(0)} °C · ${fmtP(pdMarker.P)} · ${phaseName(PH.phase(pdMarker.T, pdMarker.P))}`, PD.x0, 26);
     pdTex.needsUpdate = true;
-    const hc = $('pd2d'); if (hc) { const x = hc.getContext('2d'); x.clearRect(0, 0, hc.width, hc.height); x.drawImage(pdCv, 0, 0, hc.width, hc.height); }
   }
   function fmtP(p) { return p >= 1000 ? (p / 1000).toFixed(p >= 10000 ? 0 : 1) + ' GPa' : p >= 1 ? p.toFixed(p >= 100 ? 0 : 1) + ' MPa' : p >= 0.001 ? (p * 1000).toFixed(p >= 0.1 ? 0 : 1) + ' kPa' : (p * 1e6).toFixed(0) + ' Pa'; }
   function phaseName(ph) { return { Ih: 'ice Ih', III: 'ice III', V: 'ice V', VI: 'ice VI', VII: 'ice VII', liquid: 'liquid', vapour: 'vapour', supercritical: 'supercritical' }[ph] || ph; }
@@ -575,34 +577,31 @@
   function chTitle(ch) { return (ch.title && (ch.title[cfg.lang] || ch.title.en)) || ''; }
   async function startChapter(i) {
     clearTimeout(tour.timer);
-    tour.i = Math.max(0, Math.min(TOUR.CH.length - 1, i)); const ch = tour.ch = TOUR.CH[tour.i];
+    tour.i = Math.max(0, Math.min(TOUR.CH.length - 1, i)); const ch = tour.ch = TOUR.CH[tour.i]; showHint(); stopSpeech();
     setMarker(ch.T, ch.P, true);
-    if (dacLabel && ch.macro === 'dac') { dacLabel.material.map.dispose(); const l = label(fmtP(ch.P)); dacLabel.material = l.material; }
+    if (dacLabel && ch.macro === 'dac') { dacLabel.material.map.dispose(); const l = label(fmtP(ch.P), 0.07); dacLabel.material = l.material; }
     const target = ch.rec ? 'rec_' + ch.rec : ch.state;
-    const inMol = zoom >= 0.6;
-    speakChapter(ch);
+    const inMol = zoom >= 0.4;
     if (ch.macro && (ch.dive || !target)) {
       if (zoom > 0.01) { goZoom(0); await waitZoom(); }
       if (tour.ch !== ch) return;
       setMacro(ch.macro);
     } else if (ch.macro) setMacro(ch.macro);
-    if (target) {
-      if (tour.ch !== ch) return;
-      if (ch.dive || !inMol) {
-        await loadState(target);
-        await sleep(ch.dive ? 4500 : 300);
-        if (tour.ch === ch) goZoom(1);
-      } else {
-        swapFade(() => loadState(target));
-      }
-    }
+    if (!target) { speakChapter(ch); return; }
+    if (tour.ch !== ch) return;
+    await loadState(target);
+    if (tour.ch !== ch) return;
+    const enter = () => speak(enterText(target), () => { if (tour.on && tour.ch === ch && !tour.paused) speakChapter(ch); });
+    if (ch.dive || !inMol) { await sleep(1200); if (tour.ch !== ch) return; goZoom(1); enter(); }
+    else enter();
   }
+  function enterText(st) { const T = TOUR.ENTER, n = (TOUR.PNAME[st] || TOUR.PNAME.liq298)[cfg.lang] || TOUR.PNAME[st].en; return (T[cfg.lang] || T.en).replace('{p}', n); }
   function speakChapter(ch) {
     speak(chText(ch), () => { if (tour.on && tour.ch === ch && !tour.paused) tour.timer = setTimeout(() => { if (tour.i < TOUR.CH.length - 1) startChapter(tour.i + 1); else endTour(); }, 3000); });
   }
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const waitZoom = () => new Promise((r) => { const chk = () => (Math.abs(zoom - zoomTarget) < 1e-3 ? r() : setTimeout(chk, 100)); chk(); });
-  async function swapFade(fn) { fadeOv = 1; await sleep(350); await fn(); await sleep(250); fadeOv = 0; }
+  async function swapFade(fn) { await fn(); }
   let fadeOv = 0, fadeOvCur = 0;
   function startTour() { tour.on = true; tour.paused = false; pdPath.length = 0; document.body.classList.add('touring'); $('bTour').textContent = '■ End tour'; startChapter(0); }
   function endTour() { tour.on = false; clearTimeout(tour.timer); stopSpeech(); document.body.classList.remove('touring'); $('bTour').textContent = '▶ Tour'; }
@@ -625,7 +624,7 @@
     else if (ph === 'supercritical') { st = 'scf'; opt = { T: TK * 705 / 647.096 }; msg('Supercritical: simulated at the same T/Tc in the model (density kept at 0.16 g/cm³).', 4500); }
     else if (ph === 'V') { msg('Ice V (28 molecules per monoclinic cell) is not included in this app.', 4000); return; }
     setMacro(ph === 'vapour' ? 'boiling' : /^(Ih|III|V|VI|VII)$/.test(ph) ? (P > 100 ? 'dac' : 'iceblock') : ph === 'supercritical' ? 'vessel' : 'beaker');
-    if (zoom >= 0.6) swapFade(() => loadState(st, opt)); else { await loadState(st, opt); goZoom(1); }
+    if (zoom >= 0.4) swapFade(() => loadState(st, opt)); else { await loadState(st, opt); goZoom(1); }
     $('panel').style.display = 'none';
   };
 
@@ -677,7 +676,7 @@
     try { await screen.orientation.lock('landscape'); } catch (e) { /* optional */ }
     try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { /* optional */ }
     if (!sensorOn) startSensor();
-    onResize();
+    showHint(); onResize();
   }
   function exitVR() {
     vr = false; document.body.classList.remove('vr', 'showui'); $('bVR').textContent = '👓 Headset'; $('fadeR').style.display = 'none';
@@ -690,10 +689,19 @@
   document.addEventListener('visibilitychange', async () => { if (vr && document.visibilityState === 'visible' && 'wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { /* ignore */ } } });
 
   // HUD inside the headset: title, science lines, subtitle, live numbers
-  const hudCv = document.createElement('canvas'); hudCv.width = 1024; hudCv.height = 420;
-  const hudCtx = hudCv.getContext('2d'), hudTex = new THREE.CanvasTexture(hudCv);
-  const hud = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.328), new THREE.MeshBasicMaterial({ map: hudTex, transparent: true, depthTest: false, depthWrite: false, fog: false }));
-  hud.position.set(0, -0.5, -1.1); hud.rotation.x = -0.42; hud.renderOrder = 10; camera.add(hud);
+  const hudCv = document.createElement('canvas'); hudCv.width = 1600; hudCv.height = 1100;
+  const hudCtx = hudCv.getContext('2d');
+  const { m: hud, tex: hudTex } = panelAt(hudCv, 1.85, 1.271875, -72);
+  // small reminder at the bottom of the straight-ahead view
+  const hintCv = document.createElement('canvas'); hintCv.width = 1024; hintCv.height = 96;
+  const hintTex = new THREE.CanvasTexture(hintCv), hint = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.1125), new THREE.MeshBasicMaterial({ map: hintTex, transparent: true, depthTest: false, depthWrite: false, fog: false, opacity: 0 }));
+  hint.position.set(0, -0.46, -1.25); hint.renderOrder = 21; camera.add(hint);
+  let hintUntil = 0; const showHint = () => { hintUntil = performance.now() + 7000; };
+  function drawHint() {
+    const c = hintCv.getContext('2d'); c.clearRect(0, 0, 1024, 96); c.fillStyle = 'rgba(8,22,38,0.7)'; c.beginPath(); c.roundRect ? c.roundRect(2, 2, 1020, 92, 40) : c.rect(2, 2, 1020, 92); c.fill();
+    c.fillStyle = '#ffffff'; c.font = '600 38px ' + "system-ui,sans-serif"; c.textAlign = 'center'; c.fillText('▲ look up: phase diagram     ▼ look down: equations & text', 512, 62); hintTex.needsUpdate = true;
+  }
+  drawHint(); showHint();
   const FONT = "system-ui,'Noto Sans Bengali','Noto Sans Devanagari','Noto Sans Oriya',sans-serif";
   function wrapText(c, text, maxW) { const words = text.split(' '), lines = []; let l = ''; for (const w of words) { const t = l ? l + ' ' + w : w; if (c.measureText(t).width > maxW && l) { lines.push(l); l = w; } else l = t; } if (l) lines.push(l); return lines; }
 
@@ -707,7 +715,8 @@
   const right = new THREE.Vector3();
   function render() {
     const w = innerWidth, h = innerHeight;
-    hud.visible = vr; pdPlane.visible = cfg.diag && vr;
+    pdPlane.visible = cfg.diag;
+    { const k = Math.max(0, Math.min(1, (hintUntil - performance.now()) / 1500)); hint.material.opacity = k; hint.visible = k > 0; }
     if (!vr) { renderer.setScissorTest(false); renderer.setViewport(0, 0, w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); camera.position.copy(camBase); renderer.render(scene, camera); return; }
     const half = w / 2; camera.aspect = half / h; camera.updateProjectionMatrix();
     const P = camera.projectionMatrix.clone(), sep = cfg.ipd * (160 / 25.4), shift = Math.max(-0.9, Math.min(0.9, (half - sep) / half));
@@ -733,7 +742,6 @@
     $('bTrail').textContent = 'Trace one molecule: ' + (cfg.trail ? 'on' : 'off');
     $('bNarr').textContent = 'Narration: ' + (cfg.narr ? 'on' : 'off');
     $('bDiag').textContent = 'Phase diagram: ' + (cfg.diag ? 'on' : 'off');
-    $('pd2d').style.display = cfg.diag && !vr ? 'block' : 'none';
     $('selLang').value = cfg.lang;
     for (const k in cfg) store.set(k, cfg[k]);
   }
@@ -766,19 +774,21 @@
     const ch = tour.on ? tour.ch : null;
     const title = ch ? chTitle(ch) : stage === 'mol' ? (cur.name || '') : 'Beaker of water';
     $('stats').innerHTML = `<b>${title}</b><br>Magnification ×${fmtMag(mag)}${stage === 'mol' ? ` · 1 Å looks like ${(molScale * 100).toFixed(1)} cm` : ''}<br>${liveLine() || 'Real-time surface waves'}<br>${stage === 'mol' && !cur.def.rec ? slowText() : ''}`;
-    $('sci').innerHTML = ch ? ch.sci.map((s) => '<div>' + s + '</div>').join('') : '';
-    $('sci').style.display = ch ? 'block' : 'none';
     $('sub').textContent = speech.sub; $('sub').style.display = speech.sub ? 'block' : 'none';
     // HUD
-    const c = hudCtx; c.clearRect(0, 0, 1024, 420);
-    c.fillStyle = 'rgba(8,22,38,0.78)'; c.beginPath(); c.roundRect ? c.roundRect(4, 4, 1016, 412, 28) : c.rect(4, 4, 1016, 412); c.fill();
-    c.fillStyle = '#9fd3ff'; c.font = '600 34px ' + FONT; c.fillText(title, 28, 50);
-    c.fillStyle = '#ffe9a6'; c.font = '24px ' + FONT; let y = 88;
-    (ch ? ch.sci : [`Magnification ×${fmtMag(mag)}`]).forEach((s) => { wrapText(c, s, 960).slice(0, 2).forEach((l) => { c.fillText(l, 28, y); y += 30; }); });
-    c.fillStyle = '#e8f1f8'; c.font = '30px ' + FONT;
-    let ys = Math.max(y + 14, 236); wrapText(c, speech.sub || '', 960).slice(0, 3).forEach((l) => { c.fillText(l, 28, ys); ys += 38; });
-    c.fillStyle = '#9db3c6'; c.font = '22px ' + FONT;
-    c.fillText(now - heardT < 3000 ? '🎤 "' + heard + '"' : (liveLine() || 'Tap: buttons · Say "next", "pause", "zoom in"'), 28, 400);
+    const c = hudCtx, W = 1600, H = 1100, X = 56, MW = W - 2 * X; c.clearRect(0, 0, W, H);
+    c.fillStyle = 'rgba(8,22,38,0.88)'; c.beginPath(); c.roundRect ? c.roundRect(4, 4, W - 8, H - 8, 44) : c.rect(4, 4, W - 8, H - 8); c.fill();
+    c.fillStyle = '#9fd3ff'; c.font = '700 74px ' + FONT; c.fillText(title, X, 100);
+    c.fillStyle = '#ffe9a6'; c.font = '50px ' + FONT; let y = 184;
+    const sciLines = ch ? ch.sci : [`Magnification ×${fmtMag(mag)}`, stage === 'mol' ? `1 Å looks like ${(molScale * 100).toFixed(1)} cm` : 'Real-time capillary–gravity waves on the surface'];
+    sciLines.forEach((s) => { wrapText(c, '• ' + s, MW).slice(0, 3).forEach((l) => { c.fillText(l, X, y); y += 60; }); y += 6; });
+    c.strokeStyle = '#ffffff33'; c.lineWidth = 2; c.beginPath(); c.moveTo(X, y); c.lineTo(W - X, y); c.stroke(); y += 62;
+    c.fillStyle = '#ffffff'; c.font = '54px ' + FONT;
+    wrapText(c, speech.sub || (tour.on ? '' : 'Start the tour with ▶ Tour, or say "start tour".'), MW).slice(0, 5).forEach((l) => { c.fillText(l, X, y); y += 66; });
+    c.fillStyle = '#c8d8e6'; c.font = '38px ' + FONT;
+    wrapText(c, liveLine() || `Magnification ×${fmtMag(mag)}`, MW).slice(0, 2).forEach((l, i) => c.fillText(l, X, H - 118 + i * 46));
+    c.fillStyle = '#8fb2cf'; c.font = '34px ' + FONT;
+    c.fillText(now - heardT < 3000 ? '🎤 "' + heard + '"' : 'Say "next", "pause", "repeat", "zoom in" · tap the screen for buttons', X, H - 26);
     hudTex.needsUpdate = true;
   }
 
@@ -786,10 +796,14 @@
   let last = performance.now(), statT = 0;
   function frame(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    if (Math.abs(zoomTarget - zoom) > 1e-4) { const s = Math.sign(zoomTarget - zoom); zoom += s * Math.min(Math.abs(zoomTarget - zoom), dt * zoomRate); }
+    // move toward the apparatus, then cut straight inside; coming out, cut to just outside, then pull back
+    if (zoomTarget >= 0.4 && zoom < 0.4) { zoom = Math.min(0.4, zoom + dt * 0.2); if (zoom >= 0.399) zoom = Math.max(1, Math.min(zoomTarget, 1)); }
+    else if (zoomTarget < 0.4 && zoom >= 0.4) zoom = 0.39;
+    else if (Math.abs(zoomTarget - zoom) > 1e-4) { const s = Math.sign(zoomTarget - zoom); zoom += s * Math.min(Math.abs(zoomTarget - zoom), dt * (zoom < 0.4 ? 0.2 : zoomRate)); }
     if ((flying || now < voiceFlyUntil) && stage === 'mol') { const f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).applyQuaternion(qAxis.clone().invert()); viewOff.addScaledVector(f, 3.0 * dt); }
     fadeOvCur += (fadeOv - fadeOvCur) * Math.min(1, dt * 8);
     updateOrientation(); applyZoom();
+    { const f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); if (Math.hypot(f.x, f.z) > 0.15) { const yw = Math.atan2(-f.x, -f.z); let d = yw - rigYaw; d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); rigYaw += d * Math.min(1, dt * 4); } rig.rotation.y = rigYaw; rig.position.copy(camBase); }
     if (fadeOvCur > 0.01) $('fade').style.opacity = Math.max(+$('fade').style.opacity, fadeOvCur).toFixed(3);
     if (macro.visible) { const sc = SCENES[macroName].g; sc.traverse((o) => { if (o.userData.update) o.userData.update(now / 1000, dt); }); }
     if (rec.on) recFrame(dt); else pumpSim();

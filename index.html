@@ -23,7 +23,7 @@
   #stats.mini{max-height:20px;overflow:hidden}
   #sci{right:8px;top:calc(62px + env(safe-area-inset-top,0));max-width:min(48vw,480px);font-size:12px;line-height:1.45;background:#0b1a2ad9;border:1px solid #ffe9a655;border-radius:12px;padding:7px 11px;color:#ffe9a6;display:none;font-family:'Cambria Math','STIX Two Math',Georgia,serif}
   #sci div{margin:2px 0}
-  #sub{left:8px;bottom:calc(8px + env(safe-area-inset-bottom,0));max-width:calc(100vw - min(26vw,260px) - 32px);font-size:16px;line-height:1.4;background:#000c;border-radius:12px;padding:8px 14px;display:none}
+  #sub{left:8px;bottom:calc(8px + env(safe-area-inset-bottom,0));max-width:calc(100vw - 32px);font-size:16px;line-height:1.4;background:#000c;border-radius:12px;padding:8px 14px;display:none}
   #pd2d{right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0));width:min(26vw,260px);height:auto;border-radius:12px;display:none}
   #panel{right:8px;top:62px;width:min(92vw,340px);max-height:calc(100% - 80px);overflow:auto;background:#0b1a2af2;border:1px solid #ffffff33;border-radius:14px;padding:12px 14px;display:none;font-size:14px;z-index:7}
   #panel label{display:block;margin:10px 0 2px}
@@ -60,9 +60,7 @@
   <button id="bEq" title="Equations">∑</button>
 </div>
 <div id="stats" class="ui"></div>
-<div id="sci" class="ui"></div>
 <div id="sub" class="ui"></div>
-<canvas id="pd2d" class="ui" width="320" height="280"></canvas>
 <div id="panel" class="ui">
   <h4>Free mode: choose temperature and pressure</h4>
   <label>Temperature: <span id="vFT"></span> °C</label>
